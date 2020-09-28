@@ -13,6 +13,9 @@ using Microsoft.Extensions.Logging;
 using DatingApp.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace DatingApp.API
 {
@@ -42,7 +45,21 @@ namespace DatingApp.API
                     });
             });
             services.AddCors();
+            var x = Configuration.GetSection("AppSettings:Token").Value;
             services.AddScoped<IAuthRepository, AuthRepository>();
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>{
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII
+                        .GetBytes(Configuration.GetSection("AppSettings:Token").Value)),
+                        ValidateIssuer = false,
+                        ValidateAudience = false
+                        //ValidIssuer = "localhost",
+                        //ValidAudience = "localhost"
+                    };
+                });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -53,15 +70,17 @@ namespace DatingApp.API
                 app.UseDeveloperExceptionPage();
             }
 
-            // app.UseHttpsRedirection();
+            app.UseHttpsRedirection();
             app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+            
             app.UseRouting();
-
+            app.UseAuthentication();
             app.UseAuthorization();
-            app.UseSwagger();
-            app.UseSwaggerUI(x=>{
-                x.SwaggerEndpoint("/swagger/v1/swagger.json","DatingApp API v1");
-            });
+            // app.UseSwagger();
+            // app.UseSwaggerUI(x=>{
+            //     x.SwaggerEndpoint("/swagger/v1/swagger.json","DatingApp API v1");
+            // });
+            
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
